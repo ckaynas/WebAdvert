@@ -28,6 +28,7 @@ namespace WebAdvert.Web.Controllers
             _pool = pool;
         }
 
+        #region Get Operations
         public async Task<IActionResult> Signup()
         {
             var model = new SignupModel();
@@ -35,7 +36,30 @@ namespace WebAdvert.Web.Controllers
             return View(model);
         }
 
+        public async Task<IActionResult> Confirm(ConfirmModel model)
+        {
+            return View(model);
+        }
+
+        public async Task<IActionResult> Login(LoginModel model)
+        {
+            return View(model);
+        }
+
+        public async Task<IActionResult> Forgot(ForgotModel model)
+        {
+            return View(model);
+        }
+
+        public async Task<IActionResult> ForgotConfirm(ForgotConfirmModel model)
+        {
+            return View(model);
+        }
+        #endregion Get Operations
+
+        #region Post Operations
         [HttpPost]
+        [ActionName("Signup")]
         public async Task<IActionResult> Signup(SignupModel model)
         {
             if (ModelState.IsValid)
@@ -63,11 +87,6 @@ namespace WebAdvert.Web.Controllers
                 }
             }
 
-            return View(model);
-        }
-
-        public async Task<IActionResult> Confirm(ConfirmModel model)
-        {
             return View(model);
         }
 
@@ -101,13 +120,7 @@ namespace WebAdvert.Web.Controllers
             }
 
             return View(model);
-        }
-
-
-        public async Task<IActionResult> Login(LoginModel model)
-        {
-            return View(model);
-        }
+        }        
 
         [HttpPost]
         [ActionName("Login")]
@@ -129,5 +142,63 @@ namespace WebAdvert.Web.Controllers
 
             return View("Login", model);
         }
+
+        [HttpPost]
+        [ActionName("Forgot")]
+        public async Task<IActionResult> ForgotPost(ForgotModel model)
+        {
+            if (ModelState.IsValid)
+            {
+                var user = await _userManager.FindByEmailAsync(model.Email).ConfigureAwait(false);
+                if (user.Status == null) 
+                {
+                    ModelState.AddModelError("Not Found", "User doesnt exists");
+                    return View(model);
+                }
+                try
+                {
+                    await user.ForgotPasswordAsync().ConfigureAwait(false);
+                }
+                catch (Exception exp)
+                {
+                    ModelState.AddModelError("Failed", exp.Message);
+                    return View(model);
+                }
+
+                return RedirectToAction("ForgotConfirm", new ForgotConfirmModel { Email = model.Email });
+            }
+
+            return View(model);
+        }
+
+        [HttpPost]
+        [ActionName("ForgotConfirm")]
+        public async Task<IActionResult> ForgotConfirmPost(ForgotConfirmModel model)
+        {
+            if (ModelState.IsValid)
+            {
+                var user = await _userManager.FindByEmailAsync(model.Email).ConfigureAwait(false);
+                if (user.Status == null)
+                {
+                    ModelState.AddModelError("Not Found", "User doesnt exists");
+                    return View(model);
+                }
+
+                try 
+                { 
+                    await user.ConfirmForgotPasswordAsync(model.VerificationCode, model.NewPassword);
+                }
+                    catch (Exception exp)
+                {
+                    ModelState.AddModelError("Failed", exp.Message);
+                    return View(model);
+                }
+
+            return RedirectToAction("", "Home");
+            }
+
+            return View(model);
+        }
+        #endregion Post Operations
     }
 }
